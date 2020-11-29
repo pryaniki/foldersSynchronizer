@@ -1,5 +1,7 @@
+# Local Directory Content Synchronization Service
 import os
 import sys
+from os import DirEntry as de
 
 def checkingProgPerformance(value):
     """
@@ -34,23 +36,25 @@ def chekingAccessToDirectory(fName):
     :return: True if there is access and False if not
     """
 
-    if not os.access(fName, os.F_OK):
-        print("directory ", fName, " does not exist")
-        if not os.path.isdir(fName):
+    if os.path.isdir(fName):
+        print(fName, "директория")
+        if not os.path.exists(fName):
             try:
                 os.mkdir(fName)
             except PermissionError:
                 # PermissionError
                 return False
-   # else:
-   #     print("directory ", fName, " exists")
+    else:
+        print(fName, " не является директорией")
+        return False
+
     return os.access(fName, os.R_OK) and os.access(fName, os.W_OK)
 
 
 def readConfig(fName):
     """
     Function reads config file and add specified path to list.
-    
+
     Instead of the "~" character, the path to the user's
     home directory is substituted
 
@@ -74,12 +78,12 @@ def readConfig(fName):
     for i, line in enumerate(list1):
         if line[0] == "~":
             list1[i] = home + line[1:len(line)]
-
         # Checking access rights (read / write) to a directory
-        if (not chekingAccessToDirectory(list1[i])):
+        if not chekingAccessToDirectory(list1[i]):
             return False, list1
 
     return True, list1
+
 
 def GetListDirAndFiles(directory):
     '''
@@ -103,25 +107,94 @@ def GetListDirAndFiles(directory):
 
     return folderPaths, filePaths
 
-def deletingFiles(directory):
+
+def getInodeAndDevID(path):
     """
-    Функция удоляет все файлы в указанной директории
+    Возвращает inode и id устройства на котором хранится файл или папка
+    хранящаяся по пути path
+    """
+    A = os.path.split(path)
+    name = A[1]  # название папки файла для которого получаем inode и deviseID
+    path = A[0]
+    with os.scandir(path) as itr:
+        for entry in itr:
+            if name == entry.name:
+                return entry.stat().st_ino, entry.stat().st_dev
+
+    return None
+
+
+def isOnList(list1, path):
+    """
+    Проверяет находится ли path в списке list(
+    планирую использовать для проверки находится ли папка внутри конфига
+    """
+    for line in list1:
+        if line == path:
+            return True
+
+    return False
+
+
+def someFun():
+    pass
+
+
+def getListDirIgnoreDel(paths):
+    """
+    Функция возвращает список папок, которые нельзя удолять
+    К ним относятся:
+    - все папки из списка paths
+    - все подпапки первой папки(mainFolder) из path (если они не
+    кофликтуют со списком paths)
+    то есть если mainFolder содержит в себе папку "f1" из конфига,
+    то папки из папки "f1" не должны попасть в listDir
+    :param paths: список директорий
+    """
+    listDir = paths  # список директорий, которые нельзя удолять
+    print("config:")
+    #for path in paths:
+        #print(path)
+    print()
+    mainFolder = paths[0]
+    # поиск папок в mainFolder
+    folderPaths, _ = GetListDirAndFiles(mainFolder)
+    for path in folderPaths:
+        if isOnList(paths, path):
+            print()
+        else:
+            ### проверка вложенности директорий
+            someFun()
+            pass
+    return listDir
+
+
+def deletingFilesAndFolders(directory, dirIgnore):
+    """
+    Функция удоляет все файлы и папки в указанной директории
+    за исключением тех, которые находятся в dirIgnore
     1.Директория пустая
     2.В ней есть папки
-    3.В ней есть файлы
-    4.В ней есть и папки и файлы
+    3.В ней есть файлы и ссылки(мягкие и жесткии)
+    4.В ней есть и папки и файлы и ссылки
+    dirIgnore список директорий, которые не будут удалены
     """
     folderPaths, filePaths = GetListDirAndFiles(directory)
     if filePaths:
+        print("Файлы, которые удалены:")
         for path in filePaths:
-            os.remove(path)
+            if not isOnList(dirIgnore, path):
+                print(path)
+                #os.remove(path)
     if folderPaths:
+        print("Папки, которые удалены:")
         for path in reversed(folderPaths):
-            print(path)
-            os.rmdir(path)
+            if not isOnList(dirIgnore, path):
+                print(path)
+                #os.rmdir(path)
 
 
-def copyFiles(list1, directory):
+def copyFilesAndFolders(list1, directory):
     """
     Копирует все файлы из директории
     """
@@ -140,11 +213,11 @@ def prepSync(list1):
     2. копирует все содержимое из первой директории списка
     во все папки из списка list1
     """
-    mainDirectory = list1.pop(0)
+ #   mainDirectory = list1.pop(0)
     for line in list1:
-        deletingFiles(line)
+        deletingFilesAndFolders(line, list1)
 
-    copyFiles(list1)
+    #copyFiles(list1)
 
 def Sync(list1):
     """
@@ -157,11 +230,9 @@ def Sync(list1):
 def startSync(list1):
     """
     Функция выполняют синхронизацию файлов из списка
-
     """
     prepSync(list1)
-    Sync(list1)
-   
+    Sync(list1) # в разработке
 
 
 def main():
@@ -171,8 +242,14 @@ def main():
     NameOfConfig = "config"
     progWorks, list1 = readConfig(NameOfConfig)  # progWorks = False if program broke
 
-    checkingProgPerformance(progWorks)
-    startSync(list1)
+    ### test
+    getListDirIgnoreDel(list1)
+    ###
+    #checkingProgPerformance(progWorks)
+    #startSync(list1)
+
+
+
 
 if __name__ == "__main__":
     main()
