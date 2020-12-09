@@ -25,7 +25,7 @@ def checkOS():
         return False
 
 
-def chekingAccessToDirectory(fName):
+def chekingAccessToDirectory(directory):
     """
     The function checks has current user
     rights to read / write the directory
@@ -36,19 +36,19 @@ def chekingAccessToDirectory(fName):
     :return: True if there is access and False if not
     """
 
-    if os.path.isdir(fName):
-        print(fName, "директория")
-        if not os.path.exists(fName):
+    if os.path.isdir(directory):
+        print(directory, "директория")
+        if not os.path.exists(directory):
             try:
-                os.mkdir(fName)
+                os.mkdir(directory)
             except PermissionError:
                 # PermissionError
                 return False
     else:
-        print(fName, " не является директорией")
+        print(directory, " не является директорией")
         return False
 
-    return os.access(fName, os.R_OK) and os.access(fName, os.W_OK)
+    return os.access(directory, os.R_OK) and os.access(directory, os.W_OK)
 
 
 def readConfig(fName):
