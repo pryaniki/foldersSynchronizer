@@ -3,8 +3,8 @@ from functionsForDebugging import printList
 
 
 def comparisonOfResults(namePfTest, obj1, obj2):
-    #printList("obj1", obj1)
-    #printList("obj2", obj2)
+    #printList("myAnswer", obj1)
+    #printList("rightAnswer", obj2)
     if obj1 == obj2:
         print(namePfTest, " success")
         # print()
@@ -12,9 +12,11 @@ def comparisonOfResults(namePfTest, obj1, obj2):
         print(namePfTest, " failed")
         # print()
 
-
 def runTestsForGetListDirIgnoreDel(templateTestName, templateResultName, pathToResults, numbersOfTests):
     from main import getListDirIgnoreDel
+    print("###############")
+    print("TestsForGetListDirIgnoreDel")
+    print("###############")
     for i in range(numbersOfTests):
         testName = templateTestName + str(i + 1)
         progWorks, list1 = readConfig("tests/" + testName)  # progWorks = False if program broke
@@ -26,6 +28,9 @@ def runTestsForGetListDirIgnoreDel(templateTestName, templateResultName, pathToR
 
 
 def runTestsForDeletingFilesAndFolders(templateTestName, templateResultName, pathToResults, numbersOfTests):
+    print("###############")
+    print("TestsForDeletingFilesAndFolders")
+    print("###############")
     from main import deletingFilesAndFolders
     for i in range(numbersOfTests):
         testName = templateTestName + str(i + 1)

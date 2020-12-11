@@ -33,7 +33,7 @@ def getListDirIgnoreDel(listDir):
     for element in childrenOfMainFolder[1:-1]:
         tempStr = tempStr + '/' + element
         ancestorsOfMainFolder.append(tempStr)
-    #printList("ancestorsOfMainFolder (неподходящие папки) : ", ancestorsOfMainFolder)
+    printList("ancestorsOfMainFolder (неподходящие папки) : ", ancestorsOfMainFolder)
 
     #print("ищу подпапки в: ")
     for dir in listDir[1:]:
@@ -53,8 +53,15 @@ def getListDirIgnoreDel(listDir):
 
     return necessaryDirectory
 
-
+def removeDuplicatesFromList(l):
+    n = []
+    for i in l:
+        if i not in n:
+            n.append(i)
+    return n
+    
 def deletingFilesAndFolders(config):
+    from functionsForDebugging import printList
     """
     Функция удоляет все файлы и папки в указанной директории
     за исключением тех, которые находятся в dirIgnore
@@ -67,23 +74,27 @@ def deletingFilesAndFolders(config):
     """
     delitedFilesAndDirectories = []
     dirIgnore = getListDirIgnoreDel(config)
+
+    # printList("dirIgnore",dirIgnore)
     for directory in config:
         folderPaths, filePaths = getListDirAndFiles(directory)
+       # printList("folders",folderPaths)
+       # printList("files", filePaths)
         if filePaths:
-            print("Файлы, которые удалены:")
+            #print("Файлы, которые удалены:")
             for path in filePaths:
                 if not isOnList(dirIgnore, os.path.split(path)[0]):
                     delitedFilesAndDirectories.append(path)
-                    print(path)
+                    #print(path)
                     # os.remove(path)
         if folderPaths:
-            print("Папки, которые удалены:")
+            #print("Папки, которые удалены:")
             for path in reversed(folderPaths):
-                if not (isOnList(dirIgnore, path) and not isOnList(config, path)):
+                if not (isOnList(dirIgnore, path) or isOnList(config, path)):
                     delitedFilesAndDirectories.append(path)
-                    print(path)
+                    #print(path)
                     # os.rmdir(path)
-    return delitedFilesAndDirectories
+    return removeDuplicatesFromList(delitedFilesAndDirectories)
 
 
 def copyFilesAndFolders(list1, directory):
@@ -130,7 +141,7 @@ def startTesting():
     runTestsForGetListDirIgnoreDel(templateTestName, templateResultName, pathToResults, numbersOfFiles)
 
     pathToResults = "tests/forDeletingFilesAndFolders/"
-    #runTestsForDeletingFilesAndFolders(templateTestName, templateResultName, pathToResults, numbersOfTests)
+    runTestsForDeletingFilesAndFolders(templateTestName, templateResultName, pathToResults, numbersOfFiles)
 
 
 def main():
