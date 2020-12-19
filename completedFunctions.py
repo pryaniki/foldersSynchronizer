@@ -1,6 +1,5 @@
 import sys
 import os
-from functionsForDebugging import printList
 
 
 def checkingProgPerformance(value):
@@ -87,6 +86,7 @@ def readConfig(fName):
     except  FileNotFoundError:
         print("Нет файла: ", fName)
 
+
 def getListDirAndFiles(directory):
     """
     Функция рекурсивно обходить дигекторию directory и
@@ -126,6 +126,49 @@ def getInodeAndDevID(path):
     return None
 
 
+def removeDuplicatesFromList(l):
+    n = []
+    for i in l:
+        if i not in n:
+            n.append(i)
+    return n
+
+
+def checkToSubstring(config):  # проверка подстроки
+    """ проверяет садержатся ли пути из списка config в path
+
+    subfolders # подпапки первой папки из конфига
+    """
+    mainFolder = config[-1]
+    subfolders, _ = getListDirAndFiles(mainFolder)  # подпапки 0-й папки из конфиг
+    subfolders = sorted(subfolders)
+    #printList("все подпапки 0 папки из конфига", subfolders)
+
+    ### разделит папки на 1 лагеря
+    # подпапки config[0:]
+    unnecessaryPaths = config.copy()[0:]
+    for folder in subfolders:
+        t = os.path.split(folder)[-1]  # путь к папке над folder
+        #print("folder ", folder)
+        if isOnList(unnecessaryPaths, t):
+            #print("folder ", folder, "append unnec")
+            unnecessaryPaths.append(folder)
+
+
+    # printList("unnecessaryPaths", unnecessaryPaths)
+    ####
+    # подпапки 0 config но не пренадлежащие 1 пункту
+    result = config.copy()[-1:]
+    for folder in subfolders:
+        t = os.path.split(folder)[-1]  # путь к папке над folder
+        #print("folder ", folder)
+        if not isOnList(unnecessaryPaths, t):
+            #print("folder ", folder, "append result")
+            result.append(folder)
+    #printList("result", sorted(removeDuplicatesFromList(result)))
+    return sorted(removeDuplicatesFromList(result))
+
+
 def isOnList(list1, path):
     """
     Проверяет находится ли path в списке list1
@@ -135,6 +178,7 @@ def isOnList(list1, path):
             return True
 
     return False
+
 
 def getListFromFile(fName):
     """

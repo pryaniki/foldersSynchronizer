@@ -3,40 +3,39 @@ from functionsForDebugging import printList
 
 
 def comparisonOfResults(namePfTest, obj1, obj2):
-    #printList("myAnswer", obj1)
-    #printList("rightAnswer", obj2)
     if obj1 == obj2:
         print(namePfTest, " success")
         # print()
     else:
+        printList("myAnswer", obj1)
+        printList("rightAnswer", obj2)
         print(namePfTest, " failed")
         # print()
 
-def runTestsForGetListDirIgnoreDel(templateTestName, templateResultName, pathToResults, numbersOfTests):
-    from main import getListDirIgnoreDel
+def runTestsForGetListDirIgnoreDel(pathToTests, templateTestName, templateResultName, pathToResults, numbersOfTests):
+    from main import getListDirIgnoreForRemoving
     print("###############")
-    print("TestsForGetListDirIgnoreDel")
+    print("TestsForGetListDirIgnoreForRemoving")
     print("###############")
     for i in range(numbersOfTests):
         testName = templateTestName + str(i + 1)
-        progWorks, list1 = readConfig("tests/" + testName)  # progWorks = False if program broke
-        myListOfAnswers = getListDirIgnoreDel(list1)
+        progWorks, list1 = readConfig(pathToTests + testName)  # progWorks = False if program broke
+        myListOfAnswers = getListDirIgnoreForRemoving(list1)
 
         listOfAnswers = getListFromFile(pathToResults + templateResultName + str(i + 1))
 
         comparisonOfResults(testName, sorted(myListOfAnswers), sorted(listOfAnswers))
 
 
-def runTestsForDeletingFilesAndFolders(templateTestName, templateResultName, pathToResults, numbersOfTests):
+def runTestsForDeletingFilesAndFolders(pathToTests, templateTestName, templateResultName, pathToResults, numbersOfTests):
     print("###############")
     print("TestsForDeletingFilesAndFolders")
     print("###############")
     from main import deletingFilesAndFolders
     for i in range(numbersOfTests):
         testName = templateTestName + str(i + 1)
-        progWorks, list1 = readConfig("tests/" + testName)  # progWorks = False if program broke
+        progWorks, list1 = readConfig(pathToTests + testName)  # progWorks = False if program broke
         myListOfAnswers = deletingFilesAndFolders(list1)
-
         listOfAnswers = getListFromFile(pathToResults + templateResultName + str(i + 1))
 
         comparisonOfResults(testName, sorted(myListOfAnswers), sorted(listOfAnswers))

@@ -2,64 +2,50 @@
 import os
 from functionsForDebugging import printList
 
-from completedFunctions import checkingProgPerformance, checkOS, readConfig, getListDirAndFiles, getInodeAndDevID, \
-    isOnList
+from completedFunctions import checkingProgPerformance, checkOS, readConfig, getListDirAndFiles, \
+    isOnList, checkToSubstring, removeDuplicatesFromList
 
 
-def getListDirIgnoreDel(listDir):
+def getListDirIgnoreForCleaning():
+    """ dirIgnoreForCleaning список папок, содержимое которых нельзя удолять """
+    dirIgnoreForRemoving = []
+    return dirIgnoreForRemoving
+
+def getListDirIgnoreForRemoving(config):
     """
-    Функция возвращает список папок(содержимое которых нельзя удолять) содержимое которых нельзя удолять
+    Функция возвращает список папок которые нельзя удолять
     К ним относятся:
-    - первая папка из списка listDir
-    - все подпапки первой папки(mainFolder) из listDir (но не папки,
-      которые являются подпапками папок из списка listDir)
+    -1 первая папка из списка config
+    -2 папки, содержащиеся в пути папок из config
+    -3 все подпапки первой папки(mainFolder) из config (но не папки,
+      которые являются подпапками папок из списка config)
     """
-    # нужные директории
-    necessaryDirectory = [listDir[0]] # список директорий, которые нельзя удолять
+    ### -1
+    dirIgnoreForRemoving = [config[0]]  # список директорий, которые нельзя удолять
+    #printList("config", config)
+    ### -2
+    prefix = os.path.commonprefix(config)  # общий префикс путей
+    lenPrefix = len(prefix.split('/')) - 2
+    ancestorsOfFolder = []
+    for folder in config:
+        # предки для Folder
+        folder = folder.split('/')
+        folder.pop(0)
 
-    # printList("config", listDir)
+        tempStr = os.path.split(prefix)[0]
+        for element in folder[lenPrefix:]:
+            tempStr += "/" + element
+            #printList("добавляю в список", tempStr)
+            ancestorsOfFolder.append(tempStr)
 
-    mainFolder = listDir[0]
+    #printList("it", removeDuplicatesFromList(ancestorsOfFolder))
+    dirIgnoreForRemoving += ancestorsOfFolder
+##################
+    dirIgnoreForRemoving += checkToSubstring(config)
 
-    # неподходящие папки
-    unsuitableDirectory = listDir[1:]  # список содержит в себе все подпапки папок из конфига за ислючением тех,которые не находятся над 1-й папкой из конфига
+    return removeDuplicatesFromList(dirIgnoreForRemoving)
 
-    # предки для mainFolder
-    ancestorsOfMainFolder = ['/']  # попадают пути, которые находятся выше 1 папки из listDir
 
-    childrenOfMainFolder = mainFolder.split('/')
-
-    tempStr = ""
-    for element in childrenOfMainFolder[1:-1]:
-        tempStr = tempStr + '/' + element
-        ancestorsOfMainFolder.append(tempStr)
-    printList("ancestorsOfMainFolder (неподходящие папки) : ", ancestorsOfMainFolder)
-
-    #print("ищу подпапки в: ")
-    for dir in listDir[1:]:
-        if not isOnList(ancestorsOfMainFolder, dir):
-            # print(dir)
-            folderPaths, _ = getListDirAndFiles(dir)
-            unsuitableDirectory = unsuitableDirectory + folderPaths
-            
-    #printList("unsuitableDirectory(неподходящие папки)", unsuitableDirectory)
-
-    childrenOfMainFolder, _ = getListDirAndFiles(mainFolder)
-    # print("Нужные папки: ")
-    for path in childrenOfMainFolder:
-        if not isOnList(unsuitableDirectory, path):
-            necessaryDirectory.append(path)
-            # print(path)
-
-    return necessaryDirectory
-
-def removeDuplicatesFromList(l):
-    n = []
-    for i in l:
-        if i not in n:
-            n.append(i)
-    return n
-    
 def deletingFilesAndFolders(config):
     from functionsForDebugging import printList
     """
@@ -73,13 +59,15 @@ def deletingFilesAndFolders(config):
     :return: возвращает список удаленных папок и файлов
     """
     delitedFilesAndDirectories = []
-    dirIgnore = getListDirIgnoreDel(config)
-
+    dirIgnore = getListDirIgnoreForRemoving(config) # список папок, которые нельзя удолять
+    printList("dirIg", dirIgnore)
+    dirIgnoreForRemoving = []  # список папок, которые нельзя удолять
+    dirIgnoreForCleaning = []  # список папок, ФАЙЛЫ В которых нельзя удолять
     # printList("dirIgnore",dirIgnore)
     for directory in config:
         folderPaths, filePaths = getListDirAndFiles(directory)
        # printList("folders",folderPaths)
-       # printList("files", filePaths)
+    # printList("files", filePaths)
         if filePaths:
             #print("Файлы, которые удалены:")
             for path in filePaths:
@@ -132,17 +120,23 @@ def startSync(list1):
     prepSync(list1)
     Sync(list1)  # в разработке
 
+
 def startTesting():
     from tests import runTestsForGetListDirIgnoreDel, runTestsForDeletingFilesAndFolders
     templateTestName = "config"
     templateResultName = "res"
-    numbersOfFiles = 5
-    pathToResults = "tests/forGetListDirIgnoreDel/"
-    runTestsForGetListDirIgnoreDel(templateTestName, templateResultName, pathToResults, numbersOfFiles)
+    templatePathToTests = "testsForProgram/"
+    numbersOfFiles = 6
+    pathToResults = templatePathToTests + "forGetListDirIgnoreForRemoving/"
+    #runTestsForGetListDirIgnoreDel(templatePathToTests, templateTestName, templateResultName, pathToResults, numbersOfFiles)
 
-    pathToResults = "tests/forDeletingFilesAndFolders/"
-    runTestsForDeletingFilesAndFolders(templateTestName, templateResultName, pathToResults, numbersOfFiles)
-
+    pathToResults = templatePathToTests + "forDeletingFilesAndFolders/"
+    #runTestsForDeletingFilesAndFolders(templatePathToTests, templateTestName, templateResultName, pathToResults, numbersOfFiles)
+def test():
+    #txt = "Сумма: {'225'} руб"
+    #print(txt.translate(txt.maketrans("{'}", "   ")))
+    print(os.getcwd())
+    pass
 
 def main():
     checkingProgPerformance(checkOS())  # Check operating system
@@ -150,7 +144,8 @@ def main():
     if testing:
         startTesting()
     else:
-        nameOfConfig = "config1"
+        templatePathToTests = "testsForProgram/"
+        nameOfConfig = templatePathToTests + "config5"
         progWorks, list1 = readConfig(nameOfConfig)  # progWorks = False if program broke
 
         ### test
