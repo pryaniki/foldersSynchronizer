@@ -2,9 +2,8 @@
 import os
 from functionsForDebugging import printList
 
-from completedFunctions import checkingProgPerformance, checkOS, readConfig, getListDirAndFiles, \
+from completedFunctions import checkingProgPerformance, checkOS, readConfig, \
     isOnList, removeDuplicatesFromList, deletingFilesAndFolders
-
 
 
 def copyFilesAndFolders(list1, directory):
@@ -24,7 +23,6 @@ def prepSync(list1):
     во все папки из списка list1
     """
     deletingFilesAndFolders(list1)
-
     # copyFiles(list1)
 
 
@@ -60,17 +58,14 @@ def test():
 
 def main():
     checkingProgPerformance(checkOS())  # Check operating system
-    testing = 1
+    testing = 0 # 0 - обычная работа программы / 1 запустить тестирование
     if testing:
         startTesting()
     else:
-        templatePathToTests = "testsForProgram/"
-        nameOfConfig = templatePathToTests + "config5"
+        # templatePathToTests = "testsForProgram/"
+        templatePathToTests = ""
+        nameOfConfig = templatePathToTests + "config"
         progWorks, list1 = readConfig(nameOfConfig)  # progWorks = False if program broke
-
-        ### test
-
-        ###
         checkingProgPerformance(progWorks)
         startSync(list1)
 

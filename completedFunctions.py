@@ -226,6 +226,7 @@ def getListDirIgnoreForRemovingAndCleaning(config):
 
     return removeDuplicatesFromList(dirIgnoreForRemoving), removeDuplicatesFromList(dirIgnoreForCleaning)
 
+
 def deletingFilesAndFolders(config):
     from functionsForDebugging import printList
     from completedFunctions import getListDirIgnoreForRemovingAndCleaning
@@ -264,8 +265,8 @@ def deletingFilesAndFolders(config):
                     delitedDirectories.append(path)
                     #print(path)
                     # os.rmdir(path)
-   # printList("удаленные директории", delitedDirectories)
-   # printList("удаленные файлы", delitedFiles)
+    printList("удаленные директории", delitedDirectories)
+    printList("удаленные файлы", delitedFiles)
     return removeDuplicatesFromList(delitedFiles) + removeDuplicatesFromList(delitedDirectories)
 
 
