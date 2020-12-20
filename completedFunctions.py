@@ -1,6 +1,6 @@
 import sys
 import os
-
+from functionsForDebugging import printList
 
 def checkingProgPerformance(value):
     """
@@ -11,6 +11,7 @@ def checkingProgPerformance(value):
     if not value:
         print("PermissionError")
         sys.exit(-1)
+
 
 def checkOS():
     """
@@ -139,34 +140,72 @@ def checkToSubstring(config):  # проверка подстроки
 
     subfolders # подпапки первой папки из конфига
     """
-    mainFolder = config[-1]
+    mainFolder = config[0]
     subfolders, _ = getListDirAndFiles(mainFolder)  # подпапки 0-й папки из конфиг
     subfolders = sorted(subfolders)
     #printList("все подпапки 0 папки из конфига", subfolders)
 
     ### разделит папки на 1 лагеря
     # подпапки config[0:]
-    unnecessaryPaths = config.copy()[0:]
+    unnecessaryPaths = config.copy()[1:]
     for folder in subfolders:
-        t = os.path.split(folder)[-1]  # путь к папке над folder
+        t = os.path.split(folder)[0]  # путь к папке над folder
         #print("folder ", folder)
         if isOnList(unnecessaryPaths, t):
             #print("folder ", folder, "append unnec")
             unnecessaryPaths.append(folder)
 
 
-    # printList("unnecessaryPaths", unnecessaryPaths)
+    #printList("unnecessaryPaths", unnecessaryPaths)
     ####
     # подпапки 0 config но не пренадлежащие 1 пункту
-    result = config.copy()[-1:]
+    result = config.copy()[1:]
     for folder in subfolders:
-        t = os.path.split(folder)[-1]  # путь к папке над folder
+        t = os.path.split(folder)[0]  # путь к папке над folder
         #print("folder ", folder)
         if not isOnList(unnecessaryPaths, t):
             #print("folder ", folder, "append result")
             result.append(folder)
     #printList("result", sorted(removeDuplicatesFromList(result)))
     return sorted(removeDuplicatesFromList(result))
+
+
+def getListDirIgnoreForRemoving(config):
+    """
+    Функция возвращает список папок которые нельзя удолять
+    К ним относятся:
+    -1 первая папка из списка config
+    -2 папки, содержащиеся в пути папок из config
+    -3 все подпапки первой папки(mainFolder) из config (но не папки,
+      которые являются подпапками папок из списка config)
+    """
+    ### -1
+    dirIgnoreForRemoving = [config[0]]  # список директорий, которые нельзя удолять
+    #printList("1 dirIgnoreForRemoving", dirIgnoreForRemoving)
+    #printList("config", config)
+    ### -2
+    prefix = os.path.commonprefix(config)  # общий префикс путей
+    lenPrefix = len(prefix.split('/')) - 2
+    ancestorsOfFolder = []
+    for folder in config:
+        # предки для Folder
+        folder = folder.split('/')
+        folder.pop(0)
+
+        tempStr = os.path.split(prefix)[0]
+        for element in folder[lenPrefix:]:
+            tempStr += "/" + element
+            #printList("добавляю в список", tempStr)
+            ancestorsOfFolder.append(tempStr)
+
+    #printList("2 dirIgnoreForRemoving", removeDuplicatesFromList(ancestorsOfFolder))
+    dirIgnoreForRemoving += ancestorsOfFolder
+    #printList("2 dirIgnoreForRemoving", removeDuplicatesFromList(dirIgnoreForRemoving))
+    ##################
+    dirIgnoreForRemoving += checkToSubstring(config)
+    #printList("3 dirIgnoreForRemoving", removeDuplicatesFromList(dirIgnoreForRemoving))
+
+    return removeDuplicatesFromList(dirIgnoreForRemoving)
 
 
 def isOnList(list1, path):

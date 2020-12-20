@@ -1,4 +1,4 @@
-from completedFunctions import readConfig, getListFromFile
+from completedFunctions import readConfig, getListFromFile, getListDirIgnoreForRemoving
 from functionsForDebugging import printList
 
 
@@ -13,7 +13,6 @@ def comparisonOfResults(namePfTest, obj1, obj2):
         # print()
 
 def runTestsForGetListDirIgnoreDel(pathToTests, templateTestName, templateResultName, pathToResults, numbersOfTests):
-    from main import getListDirIgnoreForRemoving
     print("###############")
     print("TestsForGetListDirIgnoreForRemoving")
     print("###############")

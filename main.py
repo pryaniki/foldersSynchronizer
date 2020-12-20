@@ -3,7 +3,7 @@ import os
 from functionsForDebugging import printList
 
 from completedFunctions import checkingProgPerformance, checkOS, readConfig, getListDirAndFiles, \
-    isOnList, checkToSubstring, removeDuplicatesFromList
+    isOnList, removeDuplicatesFromList
 
 
 def getListDirIgnoreForCleaning():
@@ -11,43 +11,10 @@ def getListDirIgnoreForCleaning():
     dirIgnoreForRemoving = []
     return dirIgnoreForRemoving
 
-def getListDirIgnoreForRemoving(config):
-    """
-    Функция возвращает список папок которые нельзя удолять
-    К ним относятся:
-    -1 первая папка из списка config
-    -2 папки, содержащиеся в пути папок из config
-    -3 все подпапки первой папки(mainFolder) из config (но не папки,
-      которые являются подпапками папок из списка config)
-    """
-    ### -1
-    dirIgnoreForRemoving = [config[0]]  # список директорий, которые нельзя удолять
-    #printList("config", config)
-    ### -2
-    prefix = os.path.commonprefix(config)  # общий префикс путей
-    lenPrefix = len(prefix.split('/')) - 2
-    ancestorsOfFolder = []
-    for folder in config:
-        # предки для Folder
-        folder = folder.split('/')
-        folder.pop(0)
-
-        tempStr = os.path.split(prefix)[0]
-        for element in folder[lenPrefix:]:
-            tempStr += "/" + element
-            #printList("добавляю в список", tempStr)
-            ancestorsOfFolder.append(tempStr)
-
-    #printList("it", removeDuplicatesFromList(ancestorsOfFolder))
-    dirIgnoreForRemoving += ancestorsOfFolder
-##################
-    dirIgnoreForRemoving += checkToSubstring(config)
-
-    return removeDuplicatesFromList(dirIgnoreForRemoving)
-
 
 def deletingFilesAndFolders(config):
     from functionsForDebugging import printList
+    from completedFunctions import getListDirIgnoreForRemoving
     """
     Функция удоляет все файлы и папки в указанной директории
     за исключением тех, которые находятся в dirIgnore
@@ -58,10 +25,10 @@ def deletingFilesAndFolders(config):
     dirIgnore список и config директорий, которые не будут удалены
     :return: возвращает список удаленных папок и файлов
     """
-    delitedFilesAndDirectories = []
-    dirIgnore = getListDirIgnoreForRemoving(config) # список папок, которые нельзя удолять
-    printList("dirIg", dirIgnore)
-    dirIgnoreForRemoving = []  # список папок, которые нельзя удолять
+    delitedDirectories = []
+    delitedFiles = []
+    dirIgnoreForRemoving = getListDirIgnoreForRemoving(config) # список папок, которые нельзя удолять
+    #printList("dirIgnoreForRemoving", dirIgnoreForRemoving)
     dirIgnoreForCleaning = []  # список папок, ФАЙЛЫ В которых нельзя удолять
     # printList("dirIgnore",dirIgnore)
     for directory in config:
@@ -71,18 +38,18 @@ def deletingFilesAndFolders(config):
         if filePaths:
             #print("Файлы, которые удалены:")
             for path in filePaths:
-                if not isOnList(dirIgnore, os.path.split(path)[0]):
-                    delitedFilesAndDirectories.append(path)
+                if not isOnList(dirIgnoreForRemoving, os.path.split(path)[0]):
+                    delitedFiles.append(path)
                     #print(path)
                     # os.remove(path)
         if folderPaths:
             #print("Папки, которые удалены:")
             for path in reversed(folderPaths):
-                if not (isOnList(dirIgnore, path) or isOnList(config, path)):
-                    delitedFilesAndDirectories.append(path)
+                if not (isOnList(dirIgnoreForRemoving, path) or isOnList(config, path)):
+                    delitedDirectories.append(path)
                     #print(path)
                     # os.rmdir(path)
-    return removeDuplicatesFromList(delitedFilesAndDirectories)
+    return removeDuplicatesFromList(delitedFiles), removeDuplicatesFromList(delitedDirectories)
 
 
 def copyFilesAndFolders(list1, directory):
@@ -128,7 +95,7 @@ def startTesting():
     templatePathToTests = "testsForProgram/"
     numbersOfFiles = 6
     pathToResults = templatePathToTests + "forGetListDirIgnoreForRemoving/"
-    #runTestsForGetListDirIgnoreDel(templatePathToTests, templateTestName, templateResultName, pathToResults, numbersOfFiles)
+    runTestsForGetListDirIgnoreDel(templatePathToTests, templateTestName, templateResultName, pathToResults, numbersOfFiles)
 
     pathToResults = templatePathToTests + "forDeletingFilesAndFolders/"
     #runTestsForDeletingFilesAndFolders(templatePathToTests, templateTestName, templateResultName, pathToResults, numbersOfFiles)
@@ -145,7 +112,7 @@ def main():
         startTesting()
     else:
         templatePathToTests = "testsForProgram/"
-        nameOfConfig = templatePathToTests + "config5"
+        nameOfConfig = templatePathToTests + "config1"
         progWorks, list1 = readConfig(nameOfConfig)  # progWorks = False if program broke
 
         ### test
