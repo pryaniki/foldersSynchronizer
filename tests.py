@@ -1,5 +1,6 @@
-from completedFunctions import readConfig, getListFromFile, getListDirIgnoreForRemoving
+from completedFunctions import readConfig, getListFromFile, getListDirIgnoreForRemovingAndCleaning
 from functionsForDebugging import printList
+from main import deletingFilesAndFolders
 
 
 def comparisonOfResults(namePfTest, obj1, obj2):
@@ -14,15 +15,23 @@ def comparisonOfResults(namePfTest, obj1, obj2):
 
 def runTestsForGetListDirIgnoreDel(pathToTests, templateTestName, templateResultName, pathToResults, numbersOfTests):
     print("###############")
-    print("TestsForGetListDirIgnoreForRemoving")
+    print("TestsForgetListDirIgnoreForRemovingAndCleaning")
     print("###############")
     for i in range(numbersOfTests):
         testName = templateTestName + str(i + 1)
         progWorks, list1 = readConfig(pathToTests + testName)  # progWorks = False if program broke
-        myListOfAnswers = getListDirIgnoreForRemoving(list1)
+        myListOfAnswers, _ = getListDirIgnoreForRemovingAndCleaning(list1)
+        listOfAnswers = getListFromFile(pathToResults + "folders/" + templateResultName + str(i + 1))
+        comparisonOfResults(testName, sorted(myListOfAnswers), sorted(listOfAnswers))
 
-        listOfAnswers = getListFromFile(pathToResults + templateResultName + str(i + 1))
-
+    print("###############")
+    print("TestsForGetListDirIgnoreForCleaning")
+    print("###############")
+    for i in range(numbersOfTests):
+        testName = templateTestName + str(i + 1)
+        progWorks, list1 = readConfig(pathToTests + testName)  # progWorks = False if program broke
+        _, myListOfAnswers = getListDirIgnoreForRemovingAndCleaning(list1)
+        listOfAnswers = getListFromFile(pathToResults + "files/" + templateResultName + str(i + 1))
         comparisonOfResults(testName, sorted(myListOfAnswers), sorted(listOfAnswers))
 
 
@@ -30,7 +39,6 @@ def runTestsForDeletingFilesAndFolders(pathToTests, templateTestName, templateRe
     print("###############")
     print("TestsForDeletingFilesAndFolders")
     print("###############")
-    from main import deletingFilesAndFolders
     for i in range(numbersOfTests):
         testName = templateTestName + str(i + 1)
         progWorks, list1 = readConfig(pathToTests + testName)  # progWorks = False if program broke

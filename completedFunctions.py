@@ -170,19 +170,41 @@ def checkToSubstring(config):  # проверка подстроки
     return sorted(removeDuplicatesFromList(result))
 
 
-def getListDirIgnoreForRemoving(config):
+def getListDirIgnoreForRemovingAndCleaning(config):
     """
-    Функция возвращает список папок которые нельзя удолять
+    Функция возвращает:
+    1)список папок которые нельзя удолять;
+    2)список папок, в которых нельзя удолять файлы
+    1 пункт
     К ним относятся:
     -1 первая папка из списка config
     -2 папки, содержащиеся в пути папок из config
     -3 все подпапки первой папки(mainFolder) из config (но не папки,
       которые являются подпапками папок из списка config)
+    2 пункт
+    К ним относятся:
+    -4 получитс список папок, файлы в которых нельзя удолять
     """
     ### -1
     dirIgnoreForRemoving = [config[0]]  # список директорий, которые нельзя удолять
-    #printList("1 dirIgnoreForRemoving", dirIgnoreForRemoving)
-    #printList("config", config)
+
+    ### -3
+    dirIgnoreForRemoving += checkToSubstring(config)
+    # printList("3 dirIgnoreForRemoving", removeDuplicatesFromList(dirIgnoreForRemoving))
+
+    ### -4
+    tempList = []
+    for path in dirIgnoreForRemoving:
+        for element in config[1:]:
+            if element == path:
+                tempList.append(element)
+                break
+
+    dirIgnoreForCleaning = []
+    for path in dirIgnoreForRemoving:
+        if not isOnList(tempList, path):
+            dirIgnoreForCleaning.append(path)
+    # printList("4 dirIgnoreForCleaning", removeDuplicatesFromList(dirIgnoreForCleaning))
     ### -2
     prefix = os.path.commonprefix(config)  # общий префикс путей
     lenPrefix = len(prefix.split('/')) - 2
@@ -198,14 +220,53 @@ def getListDirIgnoreForRemoving(config):
             #printList("добавляю в список", tempStr)
             ancestorsOfFolder.append(tempStr)
 
-    #printList("2 dirIgnoreForRemoving", removeDuplicatesFromList(ancestorsOfFolder))
+    #printList("ancestorsOfFolder", removeDuplicatesFromList(ancestorsOfFolder))
     dirIgnoreForRemoving += ancestorsOfFolder
     #printList("2 dirIgnoreForRemoving", removeDuplicatesFromList(dirIgnoreForRemoving))
-    ##################
-    dirIgnoreForRemoving += checkToSubstring(config)
-    #printList("3 dirIgnoreForRemoving", removeDuplicatesFromList(dirIgnoreForRemoving))
 
-    return removeDuplicatesFromList(dirIgnoreForRemoving)
+    return removeDuplicatesFromList(dirIgnoreForRemoving), removeDuplicatesFromList(dirIgnoreForCleaning)
+
+def deletingFilesAndFolders(config):
+    from functionsForDebugging import printList
+    from completedFunctions import getListDirIgnoreForRemovingAndCleaning
+    """
+    Функция удоляет все файлы и папки в указанной директории
+    за исключением тех, которые находятся в dirIgnore
+    1.Директория пустая
+    2.В ней есть папки
+    3.В ней есть файлы и ссылки(мягкие и жесткии)
+    4.В ней есть и папки и файлы и ссылки
+    dirIgnore список и config директорий, которые не будут удалены
+    :return: возвращает список удаленных папок и файлов
+    """
+    delitedDirectories = []
+    delitedFiles = []
+
+    # список папок, которые нельзя удолять,| список папок, ФАЙЛЫ В которых нельзя удолять
+    dirIgnoreForRemoving, dirIgnoreForCleaning = getListDirIgnoreForRemovingAndCleaning(config)
+    #printList("dirIgnoreForRemoving", dirIgnoreForRemoving)
+    #printList("dirIgnoreForCleaning ", dirIgnoreForCleaning)
+    for directory in config:
+        folderPaths, filePaths = getListDirAndFiles(directory)
+       # printList("folders",folderPaths)
+    # printList("files", filePaths)
+        if filePaths:
+            #print("Файлы, которые удалены:")
+            for path in filePaths:
+                if not isOnList(dirIgnoreForCleaning, os.path.split(path)[0]):
+                    delitedFiles.append(path)
+                    #print(path)
+                    # os.remove(path)
+        if folderPaths:
+            #print("Папки, которые удалены:")
+            for path in reversed(folderPaths):
+                if not (isOnList(dirIgnoreForRemoving, path) or isOnList(config, path)):
+                    delitedDirectories.append(path)
+                    #print(path)
+                    # os.rmdir(path)
+   # printList("удаленные директории", delitedDirectories)
+   # printList("удаленные файлы", delitedFiles)
+    return removeDuplicatesFromList(delitedFiles) + removeDuplicatesFromList(delitedDirectories)
 
 
 def isOnList(list1, path):
@@ -227,4 +288,3 @@ def getListFromFile(fName):
     """
     with open(fName) as f:
         return f.read().splitlines()
-
