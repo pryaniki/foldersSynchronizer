@@ -1,6 +1,6 @@
 import sys
 import os
-from functionsForDebugging import printList
+#from functionsForDebugging import printList
 
 def checkingProgPerformance(value):
     """
@@ -245,8 +245,6 @@ def deletingFilesAndFolders(config):
 
     # список папок, которые нельзя удолять,| список папок, ФАЙЛЫ В которых нельзя удолять
     dirIgnoreForRemoving, dirIgnoreForCleaning = getListDirIgnoreForRemovingAndCleaning(config)
-    #printList("dirIgnoreForRemoving", dirIgnoreForRemoving)
-    #printList("dirIgnoreForCleaning ", dirIgnoreForCleaning)
     for directory in config:
         folderPaths, filePaths = getListDirAndFiles(directory)
        # printList("folders",folderPaths)
@@ -256,17 +254,15 @@ def deletingFilesAndFolders(config):
             for path in filePaths:
                 if not isOnList(dirIgnoreForCleaning, os.path.split(path)[0]):
                     delitedFiles.append(path)
-                    #print(path)
-                    # os.remove(path)
+                    #os.remove(path)
         if folderPaths:
             #print("Папки, которые удалены:")
             for path in reversed(folderPaths):
                 if not (isOnList(dirIgnoreForRemoving, path) or isOnList(config, path)):
                     delitedDirectories.append(path)
-                    #print(path)
-                    # os.rmdir(path)
-    printList("удаленные директории", delitedDirectories)
-    printList("удаленные файлы", delitedFiles)
+                    #os.rmdir(path)
+   # printList("удаленные директории", delitedDirectories)
+   # printList("удаленные файлы", delitedFiles)
     return removeDuplicatesFromList(delitedFiles) + removeDuplicatesFromList(delitedDirectories)
 
 
