@@ -3,6 +3,7 @@ import sys
 import time
 import json
 import inotify.adapters
+import shutil
 #from inotify_simple import INotify, flags
 
 from shutil import copyfile
@@ -118,7 +119,31 @@ def сhecking_folder_changes(inotif, changes, pref):
                     #modification.append(int(os.path.getmtime(current_path)))
     return changes
 
+def emptydir(top):
+    if(top == '/' or top == "\\"): return
+    else:
+        for root, dirs, files in os.walk(top, topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
+
+
+def restore_folders_to_original_state():
+    from completedFunctions import getListDirAndFiles
+    names = os.listdir("/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Tests/")
+
+    import sh
+    emptydir('/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Tests/')
+    os.rmdir('/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Tests/')
+
+    folder_from = "/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/backup/"
+    folder_to = "/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Tests/"
+    shutil.copytree(folder_from, folder_to)
+
+
 def main():
+    restore_folders_to_original_state()
     with open(sys.argv[1], 'r') as file:
         names = json.loads(file.read())
         deletingFilesAndFolders(names)
@@ -127,17 +152,29 @@ def main():
         changes = dict()
         #changes = []
         print_it = True
-        pref ='/run/media/maks/Soft/Programs/My_programs/FS/tmp' # УДАЛИТЬ
-    while True:
-        inotif = inotify.adapters.InotifyTree(pref)
-        paths = traverse(names[0], names[0], dir_ignore_syn)
 
+
+        paths = traverse(names[0], names[0], dir_ignore_syn)
         folder_to_syn = names[0]
         for name in names[1:]:
             # if not name.startswith(names[0]):
             sync(name, paths, folder_to_syn)
-        time.sleep(2)
+
+
+        folder_content_properties = {} #  свойства содержимого папок
+        for folder in names:
+            folder_content_properties[folder[len(pref)+1:]] = traverse(folder, folder, [])
+        for i in folder_content_properties:
+            print(f'{i} *** {folder_content_properties[i]}')
+
+
+    pref ='/run/media/maks/Soft/Programs/My_programs/FS/tmp' # УДАЛИТЬ
+
+    while True:
+        inotif = inotify.adapters.InotifyTree(pref)
+
         #changes = сhecking_folder_changes(inotif, changes, pref).copy()
+        time.sleep(2)
         changes.update(сhecking_folder_changes(inotif, changes, pref)) # если синхронизация прошла успешно, то очистить словарь
         if print_it:
             print(f'list_changes:\n')
