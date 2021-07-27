@@ -254,21 +254,21 @@ def deletingFilesAndFolders(config):
             for path in filePaths:
                 if not isOnList(dirIgnoreForCleaning, os.path.split(path)[0]):
                     delitedFiles.append(path)
-                    #os.remove(path)
+                    os.remove(path)
         if folderPaths:
             #print("Папки, которые удалены:")
             for path in reversed(folderPaths):
                 if not (isOnList(dirIgnoreForRemoving, path) or isOnList(config, path)):
                     delitedDirectories.append(path)
-                    #os.rmdir(path)
-   # printList("удаленные директории", delitedDirectories)
-   # printList("удаленные файлы", delitedFiles)
+                    os.rmdir(path)
+    #printList("удаленные директории", delitedDirectories)
+    #printList("удаленные файлы", delitedFiles)
     return removeDuplicatesFromList(delitedFiles) + removeDuplicatesFromList(delitedDirectories)
 
 
 def isOnList(list1, path):
     """
-    Проверяет находится ли path в списке list1
+    Проверяет находится ли path в списке list1, если да, то возвращает True
     """
     for line in list1:
         if line == path:

@@ -4,16 +4,12 @@ import time
 import json
 import inotify.adapters
 import shutil
-#from inotify_simple import INotify, flags
+# from inotify_simple import INotify, flags
 
 from shutil import copyfile
 
 from completedFunctions import checkingProgPerformance, checkOS, readConfig, \
     isOnList, removeDuplicatesFromList, deletingFilesAndFolders
-
-
-def show_help():
-    print('usage: python [CONFIG]')
 
 
 def sync(root, paths, folder_to_syn):
@@ -29,14 +25,14 @@ def sync(root, paths, folder_to_syn):
                 pass  # имя занято директорией - надо удалить папку или пропустить
             else:
                 pass
-                # print('create file ', current_path)
-                # copyfile(folder_to_syn+os.sep+path, current_path)
+                print('create file ', current_path)
+                copyfile(folder_to_syn+os.sep+path, current_path)
 
         elif rec[0] == 'd':
             if not os.path.isdir(current_path):
-                # os.mkdir(current_path)
-                pass
-                # print("create dir  ", current_path)
+                os.mkdir(current_path)
+                #pass
+                print("create dir  ", current_path)
 
 
 def traverse(root, pref, dir_ignore_syn, depth=0):
@@ -47,8 +43,9 @@ def traverse(root, pref, dir_ignore_syn, depth=0):
         return
     for name in names:
         current_path = root + os.sep + name
+        #if not dir_ignore_syn is None:
         if not isOnList(dir_ignore_syn, current_path):
-            # print(current_path)
+            print(current_path)
             sync_path = name
             if depth > 0:
                 sync_path = root + os.sep + name
@@ -79,8 +76,10 @@ def get_dir_ignore_syn(pref, paths):
 
     return removeDuplicatesFromList(result)
 
+
 def folder_is_hidden(p):
-     return p.startswith('.') #linux-osx
+    return p.startswith('.')  # linux-osx
+
 
 def сhecking_folder_changes(inotif, changes, pref):
     # IN_ATTRIB — Изменены метаданные (права, дата оздания/редактирования, расширенные атрибуты, и т.д.)
@@ -95,7 +94,7 @@ def сhecking_folder_changes(inotif, changes, pref):
                       'IN_DELETE_SELF', 'IN_DELETE', 'iN_MOVE_SELF', 'IN_MOVED_FROM',
                       'IN_MOVED_TO', 'IN_CREATE']  # Подходящие флаги
     modific_flag, delete_flag, create_flag = interest_flags[:2], interest_flags[2:6], interest_flags[-2:]
-    events = inotif.event_gen(yield_nones=False, timeout_s=1)
+    events = inotif.event_gen(yield_nones=False, timeout_s=3)
     events = list(events)
     print_it = True
     for elem in events:
@@ -104,11 +103,12 @@ def сhecking_folder_changes(inotif, changes, pref):
                 if print_it:
                     print('----------------------')
                     print_it = False
-                current_path = str(elem[2])+os.sep+str(elem[3])
+                current_path = str(elem[2]) + os.sep + str(elem[3])
 
-                if not folder_is_hidden(current_path) and current_path[-5:]!=".part" and current_path[-9:] != ".kate-swp":
-                    modification = [elem[1][0], current_path[len(pref)+1:]]
-                    print(f'command {command}')
+                if not folder_is_hidden(current_path) and current_path[-5:] != ".part" and current_path[
+                                                                                           -9:] != ".kate-swp":
+                    modification = [elem[1][0], current_path[len(pref) + 1:]]
+                    #print(f'command {command}')
                     print(f'modif {modification}')
                     if isOnList(delete_flag, command):  # файл удален
                         changes[str(modification)] = ['d', 0]
@@ -116,11 +116,13 @@ def сhecking_folder_changes(inotif, changes, pref):
                         changes[str(modification)] = ['c', int(os.path.getmtime(current_path))]
                     elif isOnList(modific_flag, command):  # файл изменен
                         changes[str(modification)] = ['m', int(os.path.getmtime(current_path))]
-                    #modification.append(int(os.path.getmtime(current_path)))
+                    # modification.append(int(os.path.getmtime(current_path)))
     return changes
 
+
 def emptydir(top):
-    if(top == '/' or top == "\\"): return
+    if top == '/' or top == "\\":
+        return
     else:
         for root, dirs, files in os.walk(top, topdown=False):
             for name in files:
@@ -129,60 +131,87 @@ def emptydir(top):
                 os.rmdir(os.path.join(root, name))
 
 
-def restore_folders_to_original_state():
-    from completedFunctions import getListDirAndFiles
-    names = os.listdir("/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Tests/")
+def restore_folders_to_original_state(backup, folder_to_change):
+    """
+    Функция полностью очищает папку folder_to_change и переносит в нее файлы из backup
+    """
+    if os.path.isdir(backup) and os.path.isdir(folder_to_change):
+        emptydir(folder_to_change)
+        os.rmdir(folder_to_change)
+        shutil.copytree(backup, folder_to_change)
+    else:
+        print(f"{backup}\n или {folder_to_change}\n не являются директорией")
 
-    import sh
-    emptydir('/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Tests/')
-    os.rmdir('/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Tests/')
 
-    folder_from = "/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/backup/"
-    folder_to = "/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Tests/"
-    shutil.copytree(folder_from, folder_to)
+
+def primary_syn(names):
+    """
+    Функция проводит первичную синхронизацию папок.
+    Содержимое из 1-ой папки Config дублируется в остальные
+    """
+    #Стереть Коменарии с удалением в  deletingFilesAndFolders
+    print(names)
+    deletingFilesAndFolders(names)
+    dir_ignore_syn = get_dir_ignore_syn(names[0], names[1:])
+    print(f"игнорируем директории : {dir_ignore_syn}")
+
+    paths = traverse(names[0], names[0], dir_ignore_syn)
+    print(f"HERE\n{paths}")
+    folder_to_syn = names[0]
+    for name in names[1:]:
+        # if not name.startswith(names[0]):
+        sync(name, paths, folder_to_syn)
 
 
 def main():
-    restore_folders_to_original_state()
+    backup = "/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/backup/"
+    folder_to_change = "/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Tests/"
+    restore_folders_to_original_state(backup, folder_to_change)
+
     with open(sys.argv[1], 'r') as file:
         names = json.loads(file.read())
+
+    """ 
         deletingFilesAndFolders(names)
         dir_ignore_syn = get_dir_ignore_syn(names[0], names[1:])
         pref = os.path.commonpath(names)
-        changes = dict()
-        #changes = []
-        print_it = True
-
-
         paths = traverse(names[0], names[0], dir_ignore_syn)
         folder_to_syn = names[0]
         for name in names[1:]:
             # if not name.startswith(names[0]):
             sync(name, paths, folder_to_syn)
+    """
+    primary_syn(names)
 
+    pref = os.path.commonpath(names)
+    changes = {}
 
-        folder_content_properties = {} #  свойства содержимого папок
-        for folder in names:
-            folder_content_properties[folder[len(pref)+1:]] = traverse(folder, folder, [])
-        for i in folder_content_properties:
-            print(f'{i} *** {folder_content_properties[i]}')
+    print_it = True
 
+    folder_content_properties = {}  # свойства содержимого папок
+    for folder in names:
+        folder_content_properties[folder[len(pref) + 1:]] = traverse(folder, folder, [])
+    for i in folder_content_properties:
+        print(f'{i} *** {folder_content_properties[i]}')
 
-    pref ='/run/media/maks/Soft/Programs/My_programs/FS/tmp' # УДАЛИТЬ
-
+    #pref = '/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/tmp'  # УДАЛИТЬ
+    print(f"отслеживаю изменения в {pref}")
     while True:
         inotif = inotify.adapters.InotifyTree(pref)
 
-        #changes = сhecking_folder_changes(inotif, changes, pref).copy()
+        # changes = сhecking_folder_changes(inotif, changes, pref).copy()
         time.sleep(2)
-        changes.update(сhecking_folder_changes(inotif, changes, pref)) # если синхронизация прошла успешно, то очистить словарь
+        changes.update(
+            сhecking_folder_changes(inotif, changes, pref))  # если синхронизация прошла успешно, то очистить словарь
+        # обработать полученные изменения
+        #  Снавнить время изменения файла во всех папках конфига
+        #  если он свежее в верхней папке, то оставляем его, есле же он удален в верхней папке, то удоляем отовсюду
+
         if print_it:
             print(f'list_changes:\n')
             for elem in changes:
-                print(f'{elem} {changes[elem]}')
+              print(f'{elem} {changes[elem]}')
             print("-----")
-            #print_it = False
-        #break
 
 
 if __name__ == '__main__':
@@ -190,3 +219,5 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         print()
+
+#### Отладка
