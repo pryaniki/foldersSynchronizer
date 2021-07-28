@@ -229,7 +229,6 @@ def getListDirIgnoreForRemovingAndCleaning(config):
 
 def deletingFilesAndFolders(config):
     from functionsForDebugging import printList
-    from completedFunctions import getListDirIgnoreForRemovingAndCleaning
     """
     Функция удоляет все файлы и папки в указанной директории
     за исключением тех, которые находятся в dirIgnore

@@ -4,6 +4,7 @@ import time
 import json
 import inotify.adapters
 import shutil
+import processing_changes as proc_change
 # from inotify_simple import INotify, flags
 
 from shutil import copyfile
@@ -24,15 +25,12 @@ def sync(root, paths, folder_to_syn):
             elif os.path.isdir(current_path):
                 pass  # имя занято директорией - надо удалить папку или пропустить
             else:
-                pass
-                print('create file ', current_path)
-                copyfile(folder_to_syn+os.sep+path, current_path)
-
+                # print('create file ', current_path)
+                copyfile(folder_to_syn + os.sep + path, current_path)
         elif rec[0] == 'd':
             if not os.path.isdir(current_path):
                 os.mkdir(current_path)
-                #pass
-                print("create dir  ", current_path)
+                # print("create dir  ", current_path)
 
 
 def traverse(root, pref, dir_ignore_syn, depth=0):
@@ -43,7 +41,7 @@ def traverse(root, pref, dir_ignore_syn, depth=0):
         return
     for name in names:
         current_path = root + os.sep + name
-        #if not dir_ignore_syn is None:
+        # if not dir_ignore_syn is None:
         if not isOnList(dir_ignore_syn, current_path):
             print(current_path)
             sync_path = name
@@ -82,6 +80,15 @@ def folder_is_hidden(p):
 
 
 def сhecking_folder_changes(inotif, changes, pref):
+    """
+    Функция отслеживает изменения в директории pref и
+    возвращает словарь формата [флаг, путь к измененному файлу без префикса pref] [фдаг изменения, время изменения файла ]
+
+    Флаг изменения может принимать 3 состоянияж
+    - "mod" - объект изменяется
+    - "cha" - объект создан
+    - "del" - объект удален
+    """
     # IN_ATTRIB — Изменены метаданные (права, дата оздания/редактирования, расширенные атрибуты, и т.д.)
     # IN_CREATE — Файл/директория создан(а) в отслеживаемой директории
     # IN_DELETE — Файл/директория удален(а) в отслеживаемой директории
@@ -108,15 +115,15 @@ def сhecking_folder_changes(inotif, changes, pref):
                 if not folder_is_hidden(current_path) and current_path[-5:] != ".part" and current_path[
                                                                                            -9:] != ".kate-swp":
                     modification = [elem[1][0], current_path[len(pref) + 1:]]
-                    #print(f'command {command}')
-                    print(f'modif {modification}')
+                    # print(f'command {command}')
+                    # print(f'modif {modification}')
                     if isOnList(delete_flag, command):  # файл удален
-                        changes[str(modification)] = ['d', 0]
+                        changes[str(modification)] = ['del', 0]
                     elif isOnList(create_flag, command):  # файл создан
-                        changes[str(modification)] = ['c', int(os.path.getmtime(current_path))]
+                        changes[str(modification)] = ['cha', int(os.path.getmtime(current_path))]
                     elif isOnList(modific_flag, command):  # файл изменен
-                        changes[str(modification)] = ['m', int(os.path.getmtime(current_path))]
-                    # modification.append(int(os.path.getmtime(current_path)))
+                        changes[str(modification)] = ['mod', int(os.path.getmtime(current_path))]
+                    #modification.append(int(os.path.getmtime(current_path)))
     return changes
 
 
@@ -143,24 +150,23 @@ def restore_folders_to_original_state(backup, folder_to_change):
         print(f"{backup}\n или {folder_to_change}\n не являются директорией")
 
 
-
 def primary_syn(names):
     """
     Функция проводит первичную синхронизацию папок.
     Содержимое из 1-ой папки Config дублируется в остальные
     """
-    #Стереть Коменарии с удалением в  deletingFilesAndFolders
-    print(names)
     deletingFilesAndFolders(names)
     dir_ignore_syn = get_dir_ignore_syn(names[0], names[1:])
-    print(f"игнорируем директории : {dir_ignore_syn}")
+    # print(f"игнорируем директории : {dir_ignore_syn}")
 
     paths = traverse(names[0], names[0], dir_ignore_syn)
-    print(f"HERE\n{paths}")
+    # print(f"HERE\n{paths}")
     folder_to_syn = names[0]
     for name in names[1:]:
-        # if not name.startswith(names[0]):
+        #if not name.startswith(names[0]):
         sync(name, paths, folder_to_syn)
+
+
 
 
 def main():
@@ -171,47 +177,79 @@ def main():
     with open(sys.argv[1], 'r') as file:
         names = json.loads(file.read())
 
-    """ 
-        deletingFilesAndFolders(names)
-        dir_ignore_syn = get_dir_ignore_syn(names[0], names[1:])
-        pref = os.path.commonpath(names)
-        paths = traverse(names[0], names[0], dir_ignore_syn)
-        folder_to_syn = names[0]
-        for name in names[1:]:
-            # if not name.startswith(names[0]):
-            sync(name, paths, folder_to_syn)
-    """
     primary_syn(names)
 
     pref = os.path.commonpath(names)
     changes = {}
 
-    print_it = True
-
-    folder_content_properties = {}  # свойства содержимого папок
+    folder_content = {}  # Содержимое папок из конфига
+    folders_in_config = []  # Список папок из конфига без префикса
     for folder in names:
-        folder_content_properties[folder[len(pref) + 1:]] = traverse(folder, folder, [])
-    for i in folder_content_properties:
-        print(f'{i} *** {folder_content_properties[i]}')
+        folder_content[folder[len(pref) + 1:]] = traverse(folder, folder, [])
+        folders_in_config.append(folder[len(pref) + 1:])
+    for i in folder_content:
+        print(f'{i} *** {folder_content[i]}')
 
-    #pref = '/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/tmp'  # УДАЛИТЬ
     print(f"отслеживаю изменения в {pref}")
     while True:
         inotif = inotify.adapters.InotifyTree(pref)
 
         # changes = сhecking_folder_changes(inotif, changes, pref).copy()
-        time.sleep(2)
+        time.sleep(1)
         changes.update(
             сhecking_folder_changes(inotif, changes, pref))  # если синхронизация прошла успешно, то очистить словарь
-        # обработать полученные изменения
+
         #  Снавнить время изменения файла во всех папках конфига
         #  если он свежее в верхней папке, то оставляем его, есле же он удален в верхней папке, то удоляем отовсюду
-
+        if changes:
+            proc_change.clearing(changes, folders_in_config)
+            start_syn(changes, folders_in_config, folder_content, pref)
+        print_it = True
         if print_it:
             print(f'list_changes:\n')
             for elem in changes:
-              print(f'{elem} {changes[elem]}')
+                print(f'{elem} {changes[elem]}')
             print("-----")
+
+
+def start_syn(changes: dict, folders_in_config: list, folder_content: dict, pref: str):
+    """
+    Функция обрабатывает все изменения из changes
+    """
+    func_to_processing = {
+        ("del", "f"): proc_change.deleting_file,
+        ("del", "d"): proc_change.deleting_directory,
+    }
+    # if not name.startswith(names[0]):
+
+    for id, value in list(changes.items()):
+        path = id.split()[1][1:-2]
+
+        path_to_obj = max(list(
+            map(lambda path_config: os.path.commonpath([pref + os.sep + path, pref + os.sep + path_config]),
+                folders_in_config)))  # отсекается лишний путь слева
+        print(f"{len(pref + os.sep + path)} path {pref + os.sep + path}\n{len(path_to_obj)}path_to_obj {path_to_obj}\n")
+
+        with open(sys.argv[1], 'r') as file:
+            config = json.loads(file.read())
+
+        print(f"path до {path}")
+        path = str(pref + os.sep + path)[len(path_to_obj):]
+
+        print(f"path после {path}")
+        print(f"длина обрубки {len(pref + os.sep + path)-len(path_to_obj)+1}")
+        print(f"общий путь, который удалю{path_to_obj}")
+        index = config.index(path_to_obj)
+        print(f"index {index}")
+        for folder in folders_in_config:
+            if folder != path.split(os.sep)[index]:
+                current_path = pref + os.sep + folder + path
+                print(current_path)
+                if os.path.isfile(current_path):
+                    func_to_processing[(value[0], 'f')](current_path)
+                elif os.path.isdir(current_path):
+                    func_to_processing[(value[0], 'd')](current_path)
+        del changes[id]
 
 
 if __name__ == '__main__':
@@ -220,4 +258,6 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print()
 
-#### Отладка
+
+
+
