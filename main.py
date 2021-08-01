@@ -43,7 +43,7 @@ def traverse(root, pref, dir_ignore_syn, depth=0):
         current_path = root + os.sep + name
         # if not dir_ignore_syn is None:
         if not isOnList(dir_ignore_syn, current_path):
-            print(current_path)
+            # print(current_path)
             sync_path = name
             if depth > 0:
                 sync_path = root + os.sep + name
@@ -115,15 +115,14 @@ def сhecking_folder_changes(inotif, changes, pref):
                 if not folder_is_hidden(current_path) and current_path[-5:] != ".part" and current_path[
                                                                                            -9:] != ".kate-swp":
                     modification = [elem[1][0], current_path[len(pref) + 1:]]
-                    # print(f'command {command}')
-                    # print(f'modif {modification}')
+
                     if isOnList(delete_flag, command):  # файл удален
                         changes[str(modification)] = ['del', 0]
                     elif isOnList(create_flag, command):  # файл создан
-                        changes[str(modification)] = ['cha', int(os.path.getmtime(current_path))]
+                        changes[str(modification)] = ['cre', int(os.path.getmtime(current_path))]
                     elif isOnList(modific_flag, command):  # файл изменен
                         changes[str(modification)] = ['mod', int(os.path.getmtime(current_path))]
-                    #modification.append(int(os.path.getmtime(current_path)))
+                    # modification.append(int(os.path.getmtime(current_path)))
     return changes
 
 
@@ -160,13 +159,10 @@ def primary_syn(names):
     # print(f"игнорируем директории : {dir_ignore_syn}")
 
     paths = traverse(names[0], names[0], dir_ignore_syn)
-    # print(f"HERE\n{paths}")
     folder_to_syn = names[0]
     for name in names[1:]:
-        #if not name.startswith(names[0]):
+        # if not name.startswith(names[0]):
         sync(name, paths, folder_to_syn)
-
-
 
 
 def main():
@@ -183,9 +179,11 @@ def main():
     changes = {}
 
     folder_content = {}  # Содержимое папок из конфига
+
     folders_in_config = []  # Список папок из конфига без префикса
     for folder in names:
         folder_content[folder[len(pref) + 1:]] = traverse(folder, folder, [])
+
         folders_in_config.append(folder[len(pref) + 1:])
     for i in folder_content:
         print(f'{i} *** {folder_content[i]}')
@@ -194,8 +192,7 @@ def main():
     while True:
         inotif = inotify.adapters.InotifyTree(pref)
 
-        # changes = сhecking_folder_changes(inotif, changes, pref).copy()
-        time.sleep(1)
+        time.sleep(1)  # задержка проверки на изменеия в папках
         changes.update(
             сhecking_folder_changes(inotif, changes, pref))  # если синхронизация прошла успешно, то очистить словарь
 
@@ -217,39 +214,89 @@ def start_syn(changes: dict, folders_in_config: list, folder_content: dict, pref
     Функция обрабатывает все изменения из changes
     """
     func_to_processing = {
-        ("del", "f"): proc_change.deleting_file,
-        ("del", "d"): proc_change.deleting_directory,
+        ('f'): work_with_file,
+        ('d'): work_with_folder,
     }
-    # if not name.startswith(names[0]):
+
+    #print(f"Входные данные\ncanges: \n{changes}\nfol_i_conf{folders_in_config}\nfol_con\n{folder_content}\npref\n{pref}")
 
     for id, value in list(changes.items()):
+
+        print(f"обработка изменения {id}, {value}")
         path = id.split()[1][1:-2]
 
-        path_to_obj = max(list(
-            map(lambda path_config: os.path.commonpath([pref + os.sep + path, pref + os.sep + path_config]),
-                folders_in_config)))  # отсекается лишний путь слева
-        print(f"{len(pref + os.sep + path)} path {pref + os.sep + path}\n{len(path_to_obj)}path_to_obj {path_to_obj}\n")
+        changed_folder = max(list(
+            map(lambda path_config: os.path.commonpath([path, path_config]),
+                folders_in_config)))  # Папка, в которой произошли изменения
+        # print(f"{len(pref + os.sep + path)} path {pref + os.sep + path}\n{len(changed_folder)}changed_folder {changed_folder}\n")
 
-        with open(sys.argv[1], 'r') as file:
-            config = json.loads(file.read())
+        #print(f"path до {path}")
+        ####
+        # Доработать  path_to_modified_object
+        ####
+        path_to_modified_object = path[len(changed_folder):]  # путь к изменненому файлу \ папке
 
-        print(f"path до {path}")
-        path = str(pref + os.sep + path)[len(path_to_obj):]
+        #print(f"path после {path_to_modified_object}")
+        flag = value[0]  # "del"\"cre"\"mod"
 
-        print(f"path после {path}")
-        print(f"длина обрубки {len(pref + os.sep + path)-len(path_to_obj)+1}")
-        print(f"общий путь, который удалю{path_to_obj}")
-        index = config.index(path_to_obj)
-        print(f"index {index}")
-        for folder in folders_in_config:
-            if folder != path.split(os.sep)[index]:
-                current_path = pref + os.sep + folder + path
-                print(current_path)
-                if os.path.isfile(current_path):
-                    func_to_processing[(value[0], 'f')](current_path)
-                elif os.path.isdir(current_path):
-                    func_to_processing[(value[0], 'd')](current_path)
-        del changes[id]
+        if flag == "del":
+
+            for folder in folders_in_config:
+                path_need_to_delete = pref + os.sep + folder + path_to_modified_object
+                print(f" path_need_to_delete { path_need_to_delete}")
+                print(f"{folder + path_to_modified_object}")
+                if os.path.isdir(path_need_to_delete) and \
+                        isOnList(folders_in_config, folder + path_to_modified_object):  # Если удалена папка из print(f"Надо удалить {path_need_to_delete}")
+                    sys.exit(f"Папка {pref + os.sep + path} \nиз списка {sys.argv[1]}"
+                             f" была удалена, программа не может работать дальше")
+                else:  # удоляем
+                    if folder != changed_folder:  # не учитываю папку, в которой произошли изменения
+                        if os.path.isfile(path_need_to_delete):
+                            proc_change.deleting_file(path_need_to_delete)
+                        elif os.path.isdir(path_need_to_delete):
+                            proc_change.deleting_directory(path_need_to_delete)
+
+        elif flag == "cre":
+            for folder in folders_in_config:
+                path_need_for_copy = pref + os.sep + path  # копируем файл\папку во все папки
+                print(f"копировать {path_need_for_copy}")
+                if folder != changed_folder:  # не учитываю папку, в которой произошли изменения
+                    if os.path.isfile(path_need_for_copy):
+                        path_to_copy = pref + os.sep + folder + path_to_modified_object
+                        print(f"копировать сюда {path_to_copy}")
+                        proc_change.copy_file(path_need_for_copy, path_to_copy)
+                    elif os.path.isdir(path_need_for_copy):
+                        pass
+
+        elif flag == "mod":
+            for folder in folders_in_config:
+                path_need_for_replacement = pref + os.sep + path
+                if folder != changed_folder:  # не учитываю папку, в которой произошли изменения
+                    if os.path.isfile(path_need_for_replacement):
+                        pass
+                    elif os.path.isdir(path_need_for_replacement):
+                        pass
+
+        # если все прошло без ошибок
+        if True:
+            del changes[id]
+
+
+def work_with_file(flag, path, copy_to):
+    if flag == "del":
+        proc_change.deleting_file(path)
+    elif flag == "cre":
+        proc_change.copy_file(path, copy_to)
+    elif flag == "mod":
+        pass
+
+
+def work_with_folder(flag, path, copy_to):
+    func_to_processing = {
+        ("del"): proc_change.deleting_directory,
+    }
+    if flag == "del":
+        func_to_processing[flag](path)
 
 
 if __name__ == '__main__':
@@ -257,7 +304,3 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         print()
-
-
-
-

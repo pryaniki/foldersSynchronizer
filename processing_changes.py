@@ -1,6 +1,8 @@
 import os
 import sys
 import json
+import shutil
+
 from completedFunctions import getListDirAndFiles, getListDirIgnoreForRemovingAndCleaning, isOnList
 
 # обработка изменений
@@ -29,14 +31,14 @@ def clearing(change, folders_in_config):
         flag_for_del = True
 
 
-def deleting_file(current_path):
+def deleting_file(path: str):
     """
     Функция удоляет указанный файл
     """
-    os.remove(current_path)
+    os.remove(path)
 
 
-def deleting_directory(current_path):
+def deleting_directory(current_path: str):
     """
     Функция полностью очищает указанную директорию и удоляет саму папку
     """
@@ -55,6 +57,24 @@ def deleting_directory(current_path):
             if not (isOnList(dirIgnoreForRemoving, path) or isOnList(config, path)):
                 os.rmdir(path)
     os.rmdir(current_path)
+
+
+def creat_folder(path):
+    os.mkdir(path)
+
+
+def copy_folder(path):
+    # пооучить список файлов и папок
+    # в папке
+    folderPaths, filePaths = getListDirAndFiles(path)
+    for folder in folderPaths:
+        creat_folder(folder)
+    for file in filePaths:
+        pass  ## yflj ext
+
+
+def copy_file(path, copy_to):
+    shutil.copyfile(path, copy_to)
 
 
 def creating():
