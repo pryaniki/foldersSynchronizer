@@ -103,7 +103,7 @@ def сhecking_folder_changes(inotif, changes, pref):
     modific_flag, delete_flag, create_flag = interest_flags[:2], interest_flags[2:6], interest_flags[-2:]
     events = inotif.event_gen(yield_nones=False, timeout_s=3)
     events = list(events)
-    print_it = True
+    print_it = False
     for elem in events:
         for command in elem[1]:
             if isOnList(interest_flags, command):
@@ -112,10 +112,10 @@ def сhecking_folder_changes(inotif, changes, pref):
                     print_it = False
                 current_path = str(elem[2]) + os.sep + str(elem[3])
 
-                if not folder_is_hidden(current_path) and current_path[-5:] != ".part" and current_path[
+
+                if not folder_is_hidden(current_path[:]) and current_path[-5:] != ".part" and current_path[
                                                                                            -9:] != ".kate-swp":
                     modification = [elem[1][0], current_path[len(pref) + 1:]]
-
                     if isOnList(delete_flag, command):  # файл удален
                         changes[str(modification)] = ['del', 0]
                     elif isOnList(create_flag, command):  # файл создан
@@ -141,12 +141,15 @@ def restore_folders_to_original_state(backup, folder_to_change):
     """
     Функция полностью очищает папку folder_to_change и переносит в нее файлы из backup
     """
-    if os.path.isdir(backup) and os.path.isdir(folder_to_change):
-        emptydir(folder_to_change)
-        os.rmdir(folder_to_change)
+    if not os.path.exists(folder_to_change):
         shutil.copytree(backup, folder_to_change)
     else:
-        print(f"{backup}\n или {folder_to_change}\n не являются директорией")
+        if os.path.isdir(backup) and os.path.isdir(folder_to_change):
+            emptydir(folder_to_change)
+            os.rmdir(folder_to_change)
+            shutil.copytree(backup, folder_to_change)
+        else:
+            print(f"{backup}\n или {folder_to_change}\n не являются директорией")
 
 
 def primary_syn(names):
@@ -185,10 +188,10 @@ def main():
         folder_content[folder[len(pref) + 1:]] = traverse(folder, folder, [])
 
         folders_in_config.append(folder[len(pref) + 1:])
-    for i in folder_content:
-        print(f'{i} *** {folder_content[i]}')
+    #for i in folder_content:
+        #print(f'{i} *** {folder_content[i]}')
 
-    print(f"отслеживаю изменения в {pref}")
+    print(f"отслеживаю изменения в {pref}\n")
     while True:
         inotif = inotify.adapters.InotifyTree(pref)
 
@@ -201,7 +204,7 @@ def main():
         if changes:
             proc_change.clearing(changes, folders_in_config)
             start_syn(changes, folders_in_config, folder_content, pref)
-        print_it = True
+        print_it = False
         if print_it:
             print(f'list_changes:\n')
             for elem in changes:
@@ -222,15 +225,14 @@ def start_syn(changes: dict, folders_in_config: list, folder_content: dict, pref
 
     for id, value in list(changes.items()):
 
-        print(f"обработка изменения {id}, {value}")
-        path = id.split()[1][1:-2]
-
+        print(f"\nобработка изменения {id}, {value}")
+        path = id.split(',')[1][2:-2]
         changed_folder = max(list(
             map(lambda path_config: os.path.commonpath([path, path_config]),
                 folders_in_config)))  # Папка, в которой произошли изменения
         # print(f"{len(pref + os.sep + path)} path {pref + os.sep + path}\n{len(changed_folder)}changed_folder {changed_folder}\n")
 
-        #print(f"path до {path}")
+
         ####
         # Доработать  path_to_modified_object
         ####
@@ -261,21 +263,23 @@ def start_syn(changes: dict, folders_in_config: list, folder_content: dict, pref
                 path_need_for_copy = pref + os.sep + path  # копируем файл\папку во все папки
                 print(f"копировать {path_need_for_copy}")
                 if folder != changed_folder:  # не учитываю папку, в которой произошли изменения
+                    path_to_copy = pref + os.sep + folder + path_to_modified_object
                     if os.path.isfile(path_need_for_copy):
-                        path_to_copy = pref + os.sep + folder + path_to_modified_object
-                        print(f"копировать сюда {path_to_copy}")
                         proc_change.copy_file(path_need_for_copy, path_to_copy)
                     elif os.path.isdir(path_need_for_copy):
-                        pass
+                        proc_change.creat_folder(path_to_copy)
+                    print(f"копировать сюда {path_to_copy}")
 
         elif flag == "mod":
             for folder in folders_in_config:
-                path_need_for_replacement = pref + os.sep + path
+                path_need_for_replacement = pref + os.sep + path  # Произошли изменения
+                print(f"копировать {path_need_for_replacement}")
                 if folder != changed_folder:  # не учитываю папку, в которой произошли изменения
+                    path_to_change = pref + os.sep + folder + path_to_modified_object
                     if os.path.isfile(path_need_for_replacement):
-                        pass
+                        proc_change.change_file(path_need_for_replacement, path_to_change)
                     elif os.path.isdir(path_need_for_replacement):
-                        pass
+                        print(f"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/ {path_need_for_replacement} c флогом mod")
 
         # если все прошло без ошибок
         if True:

@@ -35,7 +35,11 @@ def deleting_file(path: str):
     """
     Функция удоляет указанный файл
     """
-    os.remove(path)
+    if os.path.exists(path):
+        os.remove(path)
+    else:
+        print(f"Файла {path} не существует, его нельзя удалить")
+
 
 
 def deleting_directory(current_path: str):
@@ -60,20 +64,14 @@ def deleting_directory(current_path: str):
 
 
 def creat_folder(path):
-    os.mkdir(path)
-
-
-def copy_folder(path):
-    # пооучить список файлов и папок
-    # в папке
-    folderPaths, filePaths = getListDirAndFiles(path)
-    for folder in folderPaths:
-        creat_folder(folder)
-    for file in filePaths:
-        pass  ## yflj ext
+    if os.path.exists(path):
+       pass  # Обработать
+    else:
+        os.mkdir(path)
 
 
 def copy_file(path, copy_to):
+
     shutil.copyfile(path, copy_to)
 
 
@@ -84,11 +82,12 @@ def creating():
     pass
 
 
-def change():
+def change_file(path, change_it):
     """
-    Функция обрабатывает объекты с флагот "mod" все из списка change
+    Функция удоляет файл change_it и перемещает path вместо него
     """
-    pass
+    deleting_file(change_it)
+    copy_file(path, change_it)
 
 
 def renaming():
