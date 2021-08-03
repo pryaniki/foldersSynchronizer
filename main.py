@@ -12,7 +12,7 @@ from shutil import copyfile
 from completedFunctions import checkingProgPerformance, checkOS, readConfig, \
     isOnList, removeDuplicatesFromList, deletingFilesAndFolders
 
-
+### добавить случай с сылкой
 def sync(root, paths, folder_to_syn):
     for path in paths:
         current_path = root + os.sep + path
@@ -127,14 +127,22 @@ def сhecking_folder_changes(inotif, changes, pref):
 
 
 def emptydir(top):
-    if top == '/' or top == "\\":
+    if top == os.sep:
         return
     else:
         for root, dirs, files in os.walk(top, topdown=False):
             for name in files:
-                os.remove(os.path.join(root, name))
+                path = os.path.join(root, name)
+                if os.path.islink(path):
+                    os.unlink(path)
+                else:
+                    os.remove(path)
             for name in dirs:
-                os.rmdir(os.path.join(root, name))
+                path = os.path.join(root, name)
+                if os.path.islink(path):
+                    os.unlink(path)
+                else:
+                    os.rmdir(path)
 
 
 def restore_folders_to_original_state(backup, folder_to_change):
@@ -159,7 +167,6 @@ def primary_syn(names):
     """
     deletingFilesAndFolders(names)
     dir_ignore_syn = get_dir_ignore_syn(names[0], names[1:])
-    # print(f"игнорируем директории : {dir_ignore_syn}")
 
     paths = traverse(names[0], names[0], dir_ignore_syn)
     folder_to_syn = names[0]
@@ -168,9 +175,26 @@ def primary_syn(names):
         sync(name, paths, folder_to_syn)
 
 
+def test():
+
+
+    # создадим символьную ссылку
+    #os.symlink(p, '/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Links/f1/link')
+
+    # ПРОВЕРКА
+    #os.path.islink('/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Links/f1/link')
+    os.unlink('/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Links/New Folder (1)')
+
+    path = "/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Links/car12.png"
+    print(f"Это ссылка {os.path.islink(path)}")
+    print(f"Это файл {os.path.isfile(path)}")
+    print(f"Это папка {os.path.isdir(path)}")
+    sys.exit(0)
+
 def main():
+
     backup = "/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/backup/"
-    folder_to_change = "/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Tests/"
+    folder_to_change = "/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Tests"
     restore_folders_to_original_state(backup, folder_to_change)
 
     with open(sys.argv[1], 'r') as file:
@@ -178,7 +202,7 @@ def main():
 
     primary_syn(names)
 
-    pref = os.path.commonpath(names)
+    pref = os.path.commonpath(names)  # общий префикс всех путей из списка
     changes = {}
 
     folder_content = {}  # Содержимое папок из конфига
@@ -216,10 +240,6 @@ def start_syn(changes: dict, folders_in_config: list, folder_content: dict, pref
     """
     Функция обрабатывает все изменения из changes
     """
-    func_to_processing = {
-        ('f'): work_with_file,
-        ('d'): work_with_folder,
-    }
 
     #print(f"Входные данные\ncanges: \n{changes}\nfol_i_conf{folders_in_config}\nfol_con\n{folder_content}\npref\n{pref}")
 
@@ -230,30 +250,26 @@ def start_syn(changes: dict, folders_in_config: list, folder_content: dict, pref
         changed_folder = max(list(
             map(lambda path_config: os.path.commonpath([path, path_config]),
                 folders_in_config)))  # Папка, в которой произошли изменения
-        # print(f"{len(pref + os.sep + path)} path {pref + os.sep + path}\n{len(changed_folder)}changed_folder {changed_folder}\n")
 
-
-        ####
-        # Доработать  path_to_modified_object
-        ####
         path_to_modified_object = path[len(changed_folder):]  # путь к изменненому файлу \ папке
 
-        #print(f"path после {path_to_modified_object}")
         flag = value[0]  # "del"\"cre"\"mod"
 
         if flag == "del":
 
             for folder in folders_in_config:
                 path_need_to_delete = pref + os.sep + folder + path_to_modified_object
-                print(f" path_need_to_delete { path_need_to_delete}")
-                print(f"{folder + path_to_modified_object}")
+                #print(f" path_need_to_delete { path_need_to_delete}")
+                #print(f"{folder + path_to_modified_object}")
                 if os.path.isdir(path_need_to_delete) and \
                         isOnList(folders_in_config, folder + path_to_modified_object):  # Если удалена папка из print(f"Надо удалить {path_need_to_delete}")
                     sys.exit(f"Папка {pref + os.sep + path} \nиз списка {sys.argv[1]}"
                              f" была удалена, программа не может работать дальше")
                 else:  # удоляем
                     if folder != changed_folder:  # не учитываю папку, в которой произошли изменения
-                        if os.path.isfile(path_need_to_delete):
+                        if os.path.islink(path_need_to_delete):
+                            proc_change.deleting_link(path_need_to_delete)
+                        elif os.path.isfile(path_need_to_delete):
                             proc_change.deleting_file(path_need_to_delete)
                         elif os.path.isdir(path_need_to_delete):
                             proc_change.deleting_directory(path_need_to_delete)
@@ -261,14 +277,17 @@ def start_syn(changes: dict, folders_in_config: list, folder_content: dict, pref
         elif flag == "cre":
             for folder in folders_in_config:
                 path_need_for_copy = pref + os.sep + path  # копируем файл\папку во все папки
-                print(f"копировать {path_need_for_copy}")
+
                 if folder != changed_folder:  # не учитываю папку, в которой произошли изменения
                     path_to_copy = pref + os.sep + folder + path_to_modified_object
-                    if os.path.isfile(path_need_for_copy):
+                    print(f"копировать \n{path_need_for_copy} \nв папку \n{path_to_copy}")
+                    if os.path.islink(path_need_for_copy):
+                        proc_change.creat_link(path_need_for_copy, path_to_copy)
+                    elif os.path.isfile(path_need_for_copy):
                         proc_change.copy_file(path_need_for_copy, path_to_copy)
                     elif os.path.isdir(path_need_for_copy):
                         proc_change.creat_folder(path_to_copy)
-                    print(f"копировать сюда {path_to_copy}")
+                    #print(f"копировать сюда {path_to_copy}")
 
         elif flag == "mod":
             for folder in folders_in_config:
@@ -276,7 +295,9 @@ def start_syn(changes: dict, folders_in_config: list, folder_content: dict, pref
                 print(f"копировать {path_need_for_replacement}")
                 if folder != changed_folder:  # не учитываю папку, в которой произошли изменения
                     path_to_change = pref + os.sep + folder + path_to_modified_object
-                    if os.path.isfile(path_need_for_replacement):
+                    if os.path.islink(path_need_for_replacement):
+                        print(f"модифицированна ссылка {path_need_for_replacement}")
+                    elif os.path.isfile(path_need_for_replacement):
                         proc_change.change_file(path_need_for_replacement, path_to_change)
                     elif os.path.isdir(path_need_for_replacement):
                         print(f"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/ {path_need_for_replacement} c флогом mod")
@@ -284,23 +305,6 @@ def start_syn(changes: dict, folders_in_config: list, folder_content: dict, pref
         # если все прошло без ошибок
         if True:
             del changes[id]
-
-
-def work_with_file(flag, path, copy_to):
-    if flag == "del":
-        proc_change.deleting_file(path)
-    elif flag == "cre":
-        proc_change.copy_file(path, copy_to)
-    elif flag == "mod":
-        pass
-
-
-def work_with_folder(flag, path, copy_to):
-    func_to_processing = {
-        ("del"): proc_change.deleting_directory,
-    }
-    if flag == "del":
-        func_to_processing[flag](path)
 
 
 if __name__ == '__main__':

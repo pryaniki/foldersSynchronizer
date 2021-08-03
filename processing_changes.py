@@ -31,6 +31,14 @@ def clearing(change, folders_in_config):
         flag_for_del = True
 
 
+def deleting_link(path: str):
+    """
+    Функция удоляет символическую ссылку на папку\файл
+    """
+    print(f"\nУдоляю ссылку {path}\n")
+    os.unlink(path)
+
+
 def deleting_file(path: str):
     """
     Функция удоляет указанный файл
@@ -39,7 +47,6 @@ def deleting_file(path: str):
         os.remove(path)
     else:
         print(f"Файла {path} не существует, его нельзя удалить")
-
 
 
 def deleting_directory(current_path: str):
@@ -55,31 +62,44 @@ def deleting_directory(current_path: str):
     print("\nfiles", filePaths)
     if filePaths:
         for path in filePaths:
-            deleting_file(path)
+            if os.path.islink(path):
+                deleting_link(path)
+            else:
+                deleting_file(path)
     if folderPaths:
         for path in reversed(folderPaths):
             if not (isOnList(dirIgnoreForRemoving, path) or isOnList(config, path)):
-                os.rmdir(path)
-    os.rmdir(current_path)
+                if os.path.islink(path):
+                    deleting_link(path)
+                else:
+                    os.rmdir(path)
+
+    if os.path.islink(current_path):
+        deleting_link(current_path)
+    else:
+        os.rmdir(current_path)
+
+
+def creat_link(path, copy_to):
+    """
+    Функция создает ссылку на файл \ папку
+    """
+    print(f"\nСоздаю ссылку {copy_to}\n")
+    os.symlink(path, copy_to)
 
 
 def creat_folder(path):
     if os.path.exists(path):
-       pass  # Обработать
+        pass  # Обработать
     else:
         os.mkdir(path)
 
 
 def copy_file(path, copy_to):
-
-    shutil.copyfile(path, copy_to)
-
-
-def creating():
-    """
-    Функция обрабатывает объекты с флагот "cha" все из списка change
-    """
-    pass
+    if os.path.islink(path):  # является ли путь символической ссылкой.
+        os.symlink(path, copy_to)
+    else:
+        shutil.copyfile(path, copy_to)
 
 
 def change_file(path, change_it):
@@ -88,17 +108,3 @@ def change_file(path, change_it):
     """
     deleting_file(change_it)
     copy_file(path, change_it)
-
-
-def renaming():
-    """
-
-    """
-    pass
-
-
-def moving():
-    """
-
-    """
-    pass

@@ -253,13 +253,19 @@ def deletingFilesAndFolders(config):
             for path in filePaths:
                 if not isOnList(dirIgnoreForCleaning, os.path.split(path)[0]):
                     delitedFiles.append(path)
-                    os.remove(path)
+                    if os.path.islink(path):  # является ли путь символической ссылкой.
+                        os.unlink(path)
+                    else:
+                        os.remove(path)
         if folderPaths:
             #print("Папки, которые удалены:")
             for path in reversed(folderPaths):
                 if not (isOnList(dirIgnoreForRemoving, path) or isOnList(config, path)):
                     delitedDirectories.append(path)
-                    os.rmdir(path)
+                    if os.path.islink(path):  # является ли путь символической ссылкой.
+                        os.unlink(path)
+                    else:
+                        os.rmdir(path)
     #printList("удаленные директории", delitedDirectories)
     #printList("удаленные файлы", delitedFiles)
     return removeDuplicatesFromList(delitedFiles) + removeDuplicatesFromList(delitedDirectories)
