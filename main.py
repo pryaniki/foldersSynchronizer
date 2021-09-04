@@ -14,6 +14,7 @@ from completedFunctions import checkingProgPerformance, checkOS, readConfig, \
 
 ### добавить случай с сылкой
 def sync(root, paths, folder_to_syn):
+    import processing_changes as pc
     for path in paths:
         current_path = root + os.sep + path
         rec = paths[path]
@@ -26,11 +27,18 @@ def sync(root, paths, folder_to_syn):
                 pass  # имя занято директорией - надо удалить папку или пропустить
             else:
                 # print('create file ', current_path)
-                copyfile(folder_to_syn + os.sep + path, current_path)
+                if os.path.islink(folder_to_syn + os.sep + path):
+                    pc.creat_link(folder_to_syn + os.sep + path, current_path)
+                else:
+                    copyfile(folder_to_syn + os.sep + path, current_path)
         elif rec[0] == 'd':
             if not os.path.isdir(current_path):
-                os.mkdir(current_path)
-                # print("create dir  ", current_path)
+                if os.path.islink(folder_to_syn + os.sep + path):
+                    pc.creat_link(folder_to_syn + os.sep + path, current_path)
+                else:
+                    os.mkdir(current_path)
+                    # print("create dir  ", current_path)
+
 
 
 def traverse(root, pref, dir_ignore_syn, depth=0):
@@ -144,20 +152,46 @@ def emptydir(top):
                 else:
                     os.rmdir(path)
 
+def copy_folder(f_from, f_to):
+    from completedFunctions import getListDirAndFiles
+    import processing_changes as pc
+
+    if not os.path.exists(f_to):
+        pc.creat_folder(f_to)
+
+    folderPaths, filePaths = getListDirAndFiles(f_from)
+    pref = os.path.commonprefix(folderPaths)
+
+    for folder in folderPaths:
+        current_path = f_to + folder[len(pref)-1:]
+        if os.path.islink(folder):
+            pc.creat_link(folder, current_path)
+        else:
+            pc.creat_folder(current_path)
+
+
+    for file in filePaths:
+        current_path = f_to + file[len(pref)-1:]
+        if os.path.islink(file):
+            pc.creat_link(file, current_path)
+        else:
+            pc.copy_file(file, current_path)
+
 
 def restore_folders_to_original_state(backup, folder_to_change):
     """
     Функция полностью очищает папку folder_to_change и переносит в нее файлы из backup
     """
     if not os.path.exists(folder_to_change):
-        shutil.copytree(backup, folder_to_change)
+        copy_folder(backup, folder_to_change)
     else:
         if os.path.isdir(backup) and os.path.isdir(folder_to_change):
             emptydir(folder_to_change)
             os.rmdir(folder_to_change)
-            shutil.copytree(backup, folder_to_change)
+            copy_folder(backup, folder_to_change)
+            #shutil.copytree(backup, folder_to_change)
         else:
-            print(f"{backup}\n или {folder_to_change}\n не являются директорией")
+             print(f"{backup}\n или {folder_to_change}\n не являются директорией")
 
 
 def primary_syn(names):
@@ -176,20 +210,8 @@ def primary_syn(names):
 
 
 def test():
+    pass
 
-
-    # создадим символьную ссылку
-    #os.symlink(p, '/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Links/f1/link')
-
-    # ПРОВЕРКА
-    #os.path.islink('/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Links/f1/link')
-    os.unlink('/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Links/New Folder (1)')
-
-    path = "/run/media/maks/Soft/Programs/My_programs/foldersSynchronizer/Links/car12.png"
-    print(f"Это ссылка {os.path.islink(path)}")
-    print(f"Это файл {os.path.isfile(path)}")
-    print(f"Это папка {os.path.isdir(path)}")
-    sys.exit(0)
 
 def main():
 
@@ -212,8 +234,6 @@ def main():
         folder_content[folder[len(pref) + 1:]] = traverse(folder, folder, [])
 
         folders_in_config.append(folder[len(pref) + 1:])
-    #for i in folder_content:
-        #print(f'{i} *** {folder_content[i]}')
 
     print(f"отслеживаю изменения в {pref}\n")
     while True:
@@ -240,8 +260,6 @@ def start_syn(changes: dict, folders_in_config: list, folder_content: dict, pref
     """
     Функция обрабатывает все изменения из changes
     """
-
-    #print(f"Входные данные\ncanges: \n{changes}\nfol_i_conf{folders_in_config}\nfol_con\n{folder_content}\npref\n{pref}")
 
     for id, value in list(changes.items()):
 
@@ -287,7 +305,6 @@ def start_syn(changes: dict, folders_in_config: list, folder_content: dict, pref
                         proc_change.copy_file(path_need_for_copy, path_to_copy)
                     elif os.path.isdir(path_need_for_copy):
                         proc_change.creat_folder(path_to_copy)
-                    #print(f"копировать сюда {path_to_copy}")
 
         elif flag == "mod":
             for folder in folders_in_config:

@@ -35,7 +35,7 @@ def deleting_link(path: str):
     """
     Функция удоляет символическую ссылку на папку\файл
     """
-    print(f"\nУдоляю ссылку {path}\n")
+    #print(f"\nУдоляю ссылку {path}\n")
     os.unlink(path)
 
 
@@ -84,7 +84,7 @@ def creat_link(path, copy_to):
     """
     Функция создает ссылку на файл \ папку
     """
-    print(f"\nСоздаю ссылку {copy_to}\n")
+    #print(f"\nСоздаю ссылку {copy_to}\n")
     os.symlink(path, copy_to)
 
 
